@@ -16,9 +16,17 @@ SDA++ Mobile is built for personal account management convenience. It is not aff
 
 ## Screenshots
 
-| Accounts | QR Scanner | Cloud Sync |
-| --- | --- | --- |
-| ![Accounts](./assets/screenshots/accounts.png) | ![QR Scanner](./assets/screenshots/qr-scanner.png) | ![Cloud Sync](./assets/screenshots/cloud-sync.png) |
+| Accounts | QR Scanner |
+| --- | --- |
+| ![Accounts](./assets/screenshots/accounts.png) | ![QR Scanner](./assets/screenshots/qr-scanner.png) |
+
+| Cloud Sync | Settings |
+| --- | --- |
+| ![Cloud Sync](./assets/screenshots/cloud-sync.png) | ![Settings](./assets/screenshots/settings.png) |
+
+| Account Detail | QR Account Picker |
+| --- | --- |
+| ![Account Detail](./assets/screenshots/account-detail.png) | ![QR Account Picker](./assets/screenshots/qr-account-picker.png) |
 
 ## How It Works
 
