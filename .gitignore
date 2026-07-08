@@ -358,6 +358,13 @@ MigrationBackup/
 local.properties
 **/local.properties
 **/build/
+/Steam Desktop Authenticator/
+/SteamDesktopAuthenticator.sln
+/icon.png
+/RELEASE_NOTES.md
+/docs/
+/lib/
+/.gitmodules
 
 # SDA++ local sensitive data
 **/maFiles/
