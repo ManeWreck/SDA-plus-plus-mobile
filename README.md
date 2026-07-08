@@ -4,6 +4,12 @@ Android Steam Guard companion focused on encrypted account storage, WebDAV backu
 
 SDA++ Mobile is built for personal account management convenience. It is not affiliated with Valve or Steam.
 
+## Download
+
+- [SDAplusplus-Mobile-debug.apk](./downloads/SDAplusplus-Mobile-debug.apk)
+
+This is a debug APK that can be installed directly on Android for testing and personal use.
+
 ## Features
 
 - Encrypted local vault for imported `.maFile` account data
