@@ -98,6 +98,18 @@ data class AppStrings(
     val shareCloudSettings: String,
     val desktopPairingSent: String,
     val desktopPairingFailed: String,
+    val confirmations: String,
+    val confirmationsIntro: String,
+    val refresh: String,
+    val noConfirmations: String,
+    val loadingConfirmations: String,
+    val accept: String,
+    val reject: String,
+    val accountTools: String,
+    val terminateSessions: String,
+    val terminateSessionsWarning: String,
+    val terminateSessionsSuccess: String,
+    val sessionRequired: String,
 )
 
 fun appStrings(language: AppLanguage): AppStrings {
@@ -196,6 +208,18 @@ fun appStrings(language: AppLanguage): AppStrings {
             shareCloudSettings = "Передать",
             desktopPairingSent = "Настройки WebDAV безопасно переданы в SDA++ Desktop.",
             desktopPairingFailed = "Не удалось подключиться к SDA++ Desktop.",
+            confirmations = "Подтверждения",
+            confirmationsIntro = "Запросы всех аккаунтов с доступной мобильной Steam-сессией.",
+            refresh = "Обновить",
+            noConfirmations = "Ожидающих подтверждений нет",
+            loadingConfirmations = "Загрузка подтверждений…",
+            accept = "Принять",
+            reject = "Отклонить",
+            accountTools = "Инструменты аккаунта",
+            terminateSessions = "Завершить все сессии",
+            terminateSessionsWarning = "Steam завершит сессии этого аккаунта на всех устройствах, включая сохранённую мобильную сессию SDA++. Продолжить?",
+            terminateSessionsSuccess = "Steam-сессии завершены. Для web-действий потребуется новый вход и повторная синхронизация.",
+            sessionRequired = "Для этого действия нужна живая мобильная Steam-сессия.",
         )
         AppLanguage.English -> AppStrings(
             accounts = "Accounts",
@@ -291,6 +315,18 @@ fun appStrings(language: AppLanguage): AppStrings {
             shareCloudSettings = "Share",
             desktopPairingSent = "WebDAV settings were securely sent to SDA++ Desktop.",
             desktopPairingFailed = "Could not connect to SDA++ Desktop.",
+            confirmations = "Confirmations",
+            confirmationsIntro = "Requests from every account with an available mobile Steam session.",
+            refresh = "Refresh",
+            noConfirmations = "No pending confirmations",
+            loadingConfirmations = "Loading confirmations…",
+            accept = "Accept",
+            reject = "Reject",
+            accountTools = "Account tools",
+            terminateSessions = "Terminate all sessions",
+            terminateSessionsWarning = "Steam will terminate this account's sessions on every device, including the mobile session saved in SDA++. Continue?",
+            terminateSessionsSuccess = "Steam sessions were terminated. Web actions now require a fresh login and another sync.",
+            sessionRequired = "This action requires a live Steam mobile session.",
         )
     }
 }

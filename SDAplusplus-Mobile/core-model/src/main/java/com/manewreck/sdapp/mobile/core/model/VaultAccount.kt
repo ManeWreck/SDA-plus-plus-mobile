@@ -5,6 +5,7 @@ data class VaultAccount(
     val accountName: String,
     val sharedSecret: String,
     val identitySecret: String? = null,
+    val deviceId: String? = null,
     val session: SteamSessionSnapshot? = null,
     val revocationCode: String? = null,
     val serialNumber: String? = null,

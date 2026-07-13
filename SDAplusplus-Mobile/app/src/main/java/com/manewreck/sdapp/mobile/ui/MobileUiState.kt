@@ -4,6 +4,7 @@ import com.manewreck.sdapp.mobile.core.model.AccountSummary
 import com.manewreck.sdapp.mobile.core.model.SyncState
 import com.manewreck.sdapp.mobile.core.model.VaultAccount
 import com.manewreck.sdapp.mobile.data.AppSettings
+import com.manewreck.sdapp.mobile.data.MobileConfirmation
 import com.manewreck.sdapp.mobile.data.SteamPublicProfile
 
 data class MobileUiState(
@@ -26,4 +27,9 @@ data class MobileUiState(
     val pinDraft: String = "",
     val lockPinDraft: String = "",
     val biometricAvailable: Boolean = false,
+    val confirmations: List<MobileConfirmation> = emptyList(),
+    val confirmationsLoading: Boolean = false,
+    val confirmationsNotice: String? = null,
+    val confirmationActionId: String? = null,
+    val accountToolRunning: Boolean = false,
 )

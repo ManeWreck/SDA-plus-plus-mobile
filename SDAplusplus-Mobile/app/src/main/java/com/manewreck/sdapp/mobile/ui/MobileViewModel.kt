@@ -11,7 +11,10 @@ import com.manewreck.sdapp.mobile.data.AppLockRepository
 import com.manewreck.sdapp.mobile.data.AppPreferencesRepository
 import com.manewreck.sdapp.mobile.data.DesktopPairingClient
 import com.manewreck.sdapp.mobile.data.LocalVaultRepository
+import com.manewreck.sdapp.mobile.data.MobileConfirmation
+import com.manewreck.sdapp.mobile.data.SteamConfirmationService
 import com.manewreck.sdapp.mobile.data.SteamPublicProfileRepository
+import com.manewreck.sdapp.mobile.data.SteamSessionToolsService
 import com.manewreck.sdapp.mobile.data.SteamTotpService
 import com.manewreck.sdapp.mobile.data.WebDavSyncRepository
 import kotlinx.coroutines.Job
@@ -31,6 +34,8 @@ class MobileViewModel(
     private val syncRepository = WebDavSyncRepository(vaultRepository)
     private val publicProfileRepository = SteamPublicProfileRepository()
     private val steamGuardService = SteamTotpService()
+    private val confirmationService = SteamConfirmationService()
+    private val sessionToolsService = SteamSessionToolsService()
     private val desktopPairingClient = DesktopPairingClient()
     private val _uiState = MutableStateFlow(MobileUiState())
     val uiState: StateFlow<MobileUiState> = _uiState.asStateFlow()
@@ -298,6 +303,96 @@ class MobileViewModel(
         val settings = normalizedSettings.cloudSync
         return desktopPairingClient.sendCloudSettings(qrPayload, settings)
             .map { currentStrings().desktopPairingSent }
+    }
+
+    fun loadConfirmations() {
+        if (_uiState.value.confirmationsLoading) return
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(confirmationsLoading = true, confirmationsNotice = null)
+            }
+            val confirmations = mutableListOf<MobileConfirmation>()
+            val failures = mutableListOf<String>()
+            _uiState.value.accounts.forEach { summary ->
+                val account = vaultRepository.getAccount(summary.steamId) ?: return@forEach
+                if (account.identitySecret.isNullOrBlank() || account.deviceId.isNullOrBlank() || account.session == null) {
+                    return@forEach
+                }
+                confirmationService.fetch(account)
+                    .onSuccess(confirmations::addAll)
+                    .onFailure { error -> failures += "${account.accountName}: ${buildErrorMessage(error)}" }
+            }
+            _uiState.update {
+                it.copy(
+                    confirmations = confirmations.sortedWith(
+                        compareBy<MobileConfirmation> { confirmation -> confirmation.accountName.lowercase() }
+                            .thenBy { confirmation -> confirmation.headline.lowercase() },
+                    ),
+                    confirmationsLoading = false,
+                    confirmationsNotice = when {
+                        confirmations.isEmpty() && failures.isNotEmpty() -> failures.first()
+                        failures.isNotEmpty() -> "${failures.size} account(s) could not be checked."
+                        else -> null
+                    },
+                )
+            }
+        }
+    }
+
+    fun respondToConfirmation(confirmation: MobileConfirmation, accept: Boolean) {
+        if (_uiState.value.confirmationActionId != null) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(confirmationActionId = confirmation.id, confirmationsNotice = null) }
+            val account = vaultRepository.getAccount(confirmation.accountSteamId)
+            val result = if (account == null) {
+                Result.failure(IllegalStateException("Account is no longer available."))
+            } else {
+                confirmationService.respond(account, confirmation, accept)
+            }
+            result.onSuccess {
+                _uiState.update { current ->
+                    current.copy(
+                        confirmations = current.confirmations.filterNot {
+                            it.accountSteamId == confirmation.accountSteamId && it.id == confirmation.id
+                        },
+                        confirmationActionId = null,
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        confirmationActionId = null,
+                        confirmationsNotice = buildErrorMessage(error),
+                    )
+                }
+            }
+        }
+    }
+
+    fun terminateSelectedAccountSessions() {
+        if (_uiState.value.accountToolRunning) return
+        val selectedId = _uiState.value.selectedAccountId ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(accountToolRunning = true, statusMessage = null) }
+            val account = vaultRepository.getAccount(selectedId)
+            val result = if (account == null) {
+                Result.failure(IllegalStateException(currentStrings().noAccountSelected))
+            } else {
+                sessionToolsService.terminateAllSessions(account)
+            }
+            result.onSuccess {
+                _uiState.update {
+                    it.copy(
+                        accountToolRunning = false,
+                        statusMessage = currentStrings().terminateSessionsSuccess,
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(accountToolRunning = false, statusMessage = buildErrorMessage(error))
+                }
+            }
+        }
     }
 
     private fun runSyncAction(successMessage: String, action: suspend () -> Result<Unit>) {

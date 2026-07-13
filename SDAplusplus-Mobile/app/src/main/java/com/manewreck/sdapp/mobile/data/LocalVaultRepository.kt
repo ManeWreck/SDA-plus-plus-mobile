@@ -284,6 +284,7 @@ class LocalVaultRepository(
             accountName = accountName,
             sharedSecret = sharedSecret,
             identitySecret = root.optString("identity_secret").ifBlank { null },
+            deviceId = root.optString("device_id").ifBlank { null },
             session = sessionSnapshot,
             revocationCode = root.optString("revocation_code").ifBlank { null },
             serialNumber = root.optString("serial_number").ifBlank { null },
@@ -320,6 +321,7 @@ class LocalVaultRepository(
                 .put("steamid", steamId)
                 .put("shared_secret", item.optString("sharedSecret"))
                 .put("identity_secret", item.optString("identitySecret"))
+                .put("device_id", item.optString("deviceId"))
                 .put("revocation_code", item.optString("revocationCode"))
                 .put("serial_number", item.optString("serialNumber"))
                 .put("uri", item.optString("uri"))
