@@ -81,12 +81,14 @@ class DesktopPairingClient {
 
             val hosts = descriptor.getJSONArray("hosts")
             val port = descriptor.getInt("port")
-            var lastFailure: Throwable? = null
             var delivered = false
+            val attemptedHosts = mutableListOf<String>()
             for (index in 0 until hosts.length()) {
+                val host = hosts.getString(index)
+                attemptedHosts += host
                 try {
                     Socket().use { socket ->
-                        socket.connect(InetSocketAddress(hosts.getString(index), port), 4_000)
+                        socket.connect(InetSocketAddress(host, port), 4_000)
                         socket.soTimeout = 6_000
                         val output = DataOutputStream(socket.getOutputStream())
                         output.writeInt(envelope.size)
@@ -100,12 +102,13 @@ class DesktopPairingClient {
                         delivered = true
                     }
                     if (delivered) break
-                } catch (error: Throwable) {
-                    lastFailure = error
-                }
+                } catch (_: Throwable) { }
             }
             envelope.fill(0)
-            require(delivered) { "Could not reach SDA++ desktop on the local network. ${lastFailure?.message.orEmpty()}" }
+            require(delivered) {
+                "Could not reach SDA++ Desktop at ${attemptedHosts.joinToString()}. " +
+                    "Use the same local network, set the Windows network profile to Private, and allow SDA++ through Windows Firewall."
+            }
         }
     }
 
