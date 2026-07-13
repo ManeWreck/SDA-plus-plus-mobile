@@ -210,6 +210,7 @@ fun SdaMobileRoot() {
                     strings = strings,
                     onSelectAccount = viewModel::selectAccount,
                     onApproveQr = viewModel::approveSelectedQrPayload,
+                    onPairDesktop = viewModel::pairDesktop,
                 )
             }
             composable(MobileDestination.CloudSync.route) {

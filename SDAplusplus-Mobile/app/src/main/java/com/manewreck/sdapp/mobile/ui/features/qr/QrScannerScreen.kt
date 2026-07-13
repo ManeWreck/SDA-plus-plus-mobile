@@ -81,6 +81,7 @@ fun QrScannerScreen(
     strings: AppStrings,
     onSelectAccount: (String) -> Unit,
     onApproveQr: suspend (String) -> Result<String>,
+    onPairDesktop: suspend (String) -> Result<String>,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -104,11 +105,41 @@ fun QrScannerScreen(
     var approvalRunning by rememberSaveable { mutableStateOf(false) }
     var scanLocked by rememberSaveable { mutableStateOf(false) }
     var accountPickerOpen by rememberSaveable { mutableStateOf(false) }
+    var pendingDesktopPairing by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         if (!cameraPermissionGranted) {
             permissionLauncher.launch(Manifest.permission.CAMERA)
         }
+    }
+
+    pendingDesktopPairing?.let { payload ->
+        AlertDialog(
+            onDismissRequest = {
+                pendingDesktopPairing = null
+                scanLocked = false
+            },
+            confirmButton = {
+                Button(onClick = {
+                    pendingDesktopPairing = null
+                    approvalRunning = true
+                    resultTitle = strings.desktopPairingTitle
+                    scope.launch {
+                        val result = onPairDesktop(payload)
+                        approvalRunning = false
+                        resultMessage = result.getOrElse { it.message ?: strings.desktopPairingFailed }
+                    }
+                }) { Text(strings.shareCloudSettings) }
+            },
+            dismissButton = {
+                Button(onClick = {
+                    pendingDesktopPairing = null
+                    scanLocked = false
+                }) { Text(strings.cancel) }
+            },
+            title = { Text(strings.desktopPairingTitle) },
+            text = { Text(strings.desktopPairingPrompt) },
+        )
     }
 
     if (approvalRunning || resultMessage != null) {
@@ -261,7 +292,10 @@ fun QrScannerScreen(
                         isActive = isCameraActive,
                         scanningEnabled = !scanLocked,
                         onQrDetected = { rawValue ->
-                            if (!scanLocked && looksLikeSteamQr(rawValue) && selectedAccount != null) {
+                            if (!scanLocked && looksLikeDesktopPairingQr(rawValue)) {
+                                scanLocked = true
+                                pendingDesktopPairing = rawValue
+                            } else if (!scanLocked && looksLikeSteamQr(rawValue) && selectedAccount != null) {
                                 scanLocked = true
                                 approvalRunning = true
                                 resultTitle = strings.qrDetected
@@ -498,6 +532,9 @@ private fun looksLikeSteamQr(rawValue: String): Boolean {
         payload.startsWith("https://steamcommunity.com/openid/login", ignoreCase = true) ||
         payload.startsWith("http://steamcommunity.com/openid/login", ignoreCase = true)
 }
+
+private fun looksLikeDesktopPairingQr(rawValue: String): Boolean =
+    rawValue.trim().startsWith("sdapp-pair://v1", ignoreCase = true)
 
 @SuppressLint("UnsafeOptInUsageError")
 @Composable

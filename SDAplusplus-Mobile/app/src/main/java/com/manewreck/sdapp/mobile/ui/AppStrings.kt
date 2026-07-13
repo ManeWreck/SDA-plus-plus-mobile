@@ -11,6 +11,7 @@ data class AppStrings(
     val qr: String,
     val account: String,
     val ok: String,
+    val cancel: String,
     val vaultStatus: String,
     val importMaFile: String,
     val importIntro: String,
@@ -92,6 +93,11 @@ data class AppStrings(
     val noSearchResults: String,
     val accountsDisplay: String,
     val favoritesFirst: String,
+    val desktopPairingTitle: String,
+    val desktopPairingPrompt: String,
+    val shareCloudSettings: String,
+    val desktopPairingSent: String,
+    val desktopPairingFailed: String,
 )
 
 fun appStrings(language: AppLanguage): AppStrings {
@@ -103,6 +109,7 @@ fun appStrings(language: AppLanguage): AppStrings {
             qr = "QR",
             account = "Аккаунт",
             ok = "OK",
+            cancel = "Отмена",
             vaultStatus = "Статус хранилища",
             importMaFile = "Импорт .maFile",
             importIntro = "Импортируй maFiles и используй Steam Guard коды прямо на этом устройстве.",
@@ -184,6 +191,11 @@ fun appStrings(language: AppLanguage): AppStrings {
             noSearchResults = "Ничего не найдено",
             accountsDisplay = "Отображение аккаунтов",
             favoritesFirst = "Избранные всегда сверху",
+            desktopPairingTitle = "Подключение к SDA++ Desktop",
+            desktopPairingPrompt = "Передать этому компьютеру URL, логин, пароль приложения и папку WebDAV? Steam-секреты и файлы аккаунтов не передаются. Оба устройства должны быть в одной частной сети.",
+            shareCloudSettings = "Передать",
+            desktopPairingSent = "Настройки WebDAV безопасно переданы в SDA++ Desktop.",
+            desktopPairingFailed = "Не удалось подключиться к SDA++ Desktop.",
         )
         AppLanguage.English -> AppStrings(
             accounts = "Accounts",
@@ -192,6 +204,7 @@ fun appStrings(language: AppLanguage): AppStrings {
             qr = "QR",
             account = "Account",
             ok = "OK",
+            cancel = "Cancel",
             vaultStatus = "Vault status",
             importMaFile = "Import .maFile",
             importIntro = "Import your maFiles and use Steam Guard codes directly on this device.",
@@ -273,6 +286,11 @@ fun appStrings(language: AppLanguage): AppStrings {
             noSearchResults = "No results found",
             accountsDisplay = "Accounts display",
             favoritesFirst = "Favorites always on top",
+            desktopPairingTitle = "Connect SDA++ Desktop",
+            desktopPairingPrompt = "Share the WebDAV URL, login, app password, and folder with this computer? Steam secrets and account files are not sent. Both devices must be on the same private network.",
+            shareCloudSettings = "Share",
+            desktopPairingSent = "WebDAV settings were securely sent to SDA++ Desktop.",
+            desktopPairingFailed = "Could not connect to SDA++ Desktop.",
         )
     }
 }

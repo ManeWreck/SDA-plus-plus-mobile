@@ -9,6 +9,7 @@ import com.manewreck.sdapp.mobile.data.AccountSortMode
 import com.manewreck.sdapp.mobile.data.AppLanguage
 import com.manewreck.sdapp.mobile.data.AppLockRepository
 import com.manewreck.sdapp.mobile.data.AppPreferencesRepository
+import com.manewreck.sdapp.mobile.data.DesktopPairingClient
 import com.manewreck.sdapp.mobile.data.LocalVaultRepository
 import com.manewreck.sdapp.mobile.data.SteamPublicProfileRepository
 import com.manewreck.sdapp.mobile.data.SteamTotpService
@@ -30,6 +31,7 @@ class MobileViewModel(
     private val syncRepository = WebDavSyncRepository(vaultRepository)
     private val publicProfileRepository = SteamPublicProfileRepository()
     private val steamGuardService = SteamTotpService()
+    private val desktopPairingClient = DesktopPairingClient()
     private val _uiState = MutableStateFlow(MobileUiState())
     val uiState: StateFlow<MobileUiState> = _uiState.asStateFlow()
 
@@ -281,6 +283,12 @@ class MobileViewModel(
 
         return steamGuardService.approveQrPayload(account, qrPayload)
             .map { currentStrings().qrApproved }
+    }
+
+    suspend fun pairDesktop(qrPayload: String): Result<String> {
+        val settings = _uiState.value.settings.cloudSync
+        return desktopPairingClient.sendCloudSettings(qrPayload, settings)
+            .map { currentStrings().desktopPairingSent }
     }
 
     private fun runSyncAction(successMessage: String, action: suspend () -> Result<Unit>) {

@@ -18,6 +18,18 @@ The mobile app already supports secure local vault storage, Steam Guard usage, c
 - Account list with favorites, sorting, search, and localization
 - Steam-style QR camera UI
 - Modern Steam QR approval flow for accounts imported with a valid `Session` snapshot
+- One-scan local pairing that sends saved WebDAV settings to a fresh SDA++ Desktop install
+
+## One-Scan Desktop Pairing
+
+On the first-run screen in SDA++ Desktop, choose **Connect cloud from SDA++ Mobile with one scan**. In the unlocked mobile app, open the QR scanner, scan the desktop code, and explicitly confirm sharing the saved WebDAV connection.
+
+- Both devices must be on the same private network.
+- The QR expires after two minutes and contains only a one-time session identifier, desktop public key, and local connection addresses.
+- WebDAV settings are encrypted end-to-end with ephemeral P-256 ECDH and AES-256-GCM.
+- Steam secrets, `.maFile` payloads, account data, and the local vault key are never placed in the QR or pairing message.
+- Desktop stores the received WebDAV password with Windows DPAPI and offers the existing validated, backup-first cloud restore.
+- Manual WebDAV setup remains available as a fallback.
 
 ## Important Limitation
 
