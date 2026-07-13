@@ -4,6 +4,10 @@ import android.net.Uri
 import android.util.Base64
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.DataInputStream
 import java.io.DataOutputStream
@@ -18,13 +22,30 @@ import javax.crypto.KeyAgreement
 import javax.crypto.Mac
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
+import java.util.concurrent.TimeUnit
 
 class DesktopPairingClient {
+    private val relayClient = OkHttpClient.Builder()
+        .connectTimeout(8, TimeUnit.SECONDS)
+        .writeTimeout(8, TimeUnit.SECONDS)
+        .readTimeout(8, TimeUnit.SECONDS)
+        .build()
+
     suspend fun sendCloudSettings(pairingUri: String, settings: CloudSyncSettings): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             require(settings.provider.name == "WebDav") { "Only WebDAV can be shared with desktop right now." }
-            require(settings.url.startsWith("https://", ignoreCase = true)) { "Save a valid HTTPS WebDAV URL first." }
-            require(settings.login.isNotBlank() && settings.password.isNotEmpty()) { "Save complete WebDAV credentials first." }
+            val normalizedUrl = settings.url.trim()
+            val webDavUri = Uri.parse(normalizedUrl)
+            require(webDavUri.scheme.equals("https", ignoreCase = true) && !webDavUri.host.isNullOrBlank()) {
+                if (normalizedUrl.isEmpty()) {
+                    "WebDAV URL is empty. Open Sync and enter the HTTPS URL."
+                } else {
+                    "Invalid WebDAV URL: use a complete HTTPS address such as https://webdav.yandex.ru/."
+                }
+            }
+            require(settings.login.isNotBlank() && settings.password.isNotEmpty()) {
+                "WebDAV login or app password is empty. Complete the fields in Sync first."
+            }
 
             val uri = Uri.parse(pairingUri.trim())
             require(uri.scheme.equals("sdapp-pair", ignoreCase = true) && uri.host == "v1") { "Unsupported SDA++ pairing QR." }
@@ -51,7 +72,7 @@ class DesktopPairingClient {
             val payload = JSONObject()
                 .put("v", 1)
                 .put("provider", "webdav")
-                .put("url", settings.url.trim())
+                .put("url", normalizedUrl)
                 .put("login", settings.login.trim())
                 .put("password", settings.password)
                 .put("remote_path", settings.remotePath.ifBlank { "SDAppVault" })
@@ -104,10 +125,32 @@ class DesktopPairingClient {
                     if (delivered) break
                 } catch (_: Throwable) { }
             }
+
+            var relayError: String? = null
+            if (!delivered && descriptor.has("relay") && descriptor.has("relay_token")) {
+                val relayUrl = descriptor.optString("relay").trim()
+                val relayToken = descriptor.optString("relay_token").trim()
+                try {
+                    require(Uri.parse(relayUrl).scheme.equals("https", ignoreCase = true)) { "Pairing relay must use HTTPS." }
+                    require(relayToken.matches(Regex("^[A-Za-z0-9_-]{43}$"))) { "Invalid pairing relay token." }
+                    val request = Request.Builder()
+                        .url("${relayUrl.trimEnd('/')}/v1/pair/$sessionIdText")
+                        .header("Authorization", "Bearer $relayToken")
+                        .put(envelope.toRequestBody("application/octet-stream".toMediaType()))
+                        .build()
+                    relayClient.newCall(request).execute().use { response ->
+                        delivered = response.code == 200 || response.code == 201
+                        if (!delivered) relayError = "relay returned HTTP ${response.code}"
+                    }
+                } catch (error: Throwable) {
+                    relayError = error.message ?: error.javaClass.simpleName
+                }
+            }
             envelope.fill(0)
             require(delivered) {
-                "Could not reach SDA++ Desktop at ${attemptedHosts.joinToString()}. " +
-                    "Use the same local network, set the Windows network profile to Private, and allow SDA++ through Windows Firewall."
+                val relayHint = relayError?.let { " Encrypted relay fallback failed: $it." } ?: ""
+                "Could not reach SDA++ Desktop at ${attemptedHosts.joinToString()}.$relayHint " +
+                    "Create a new desktop pairing QR and try again."
             }
         }
     }

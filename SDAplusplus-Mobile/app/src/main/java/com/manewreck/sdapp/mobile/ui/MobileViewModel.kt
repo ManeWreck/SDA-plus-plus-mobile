@@ -286,7 +286,16 @@ class MobileViewModel(
     }
 
     suspend fun pairDesktop(qrPayload: String): Result<String> {
-        val settings = _uiState.value.settings.cloudSync
+        val current = _uiState.value.settings
+        val normalizedCloud = current.cloudSync.copy(
+            url = current.cloudSync.url.trim(),
+            login = current.cloudSync.login.trim(),
+            remotePath = current.cloudSync.remotePath.trim().ifBlank { "SDAppVault" },
+        )
+        val normalizedSettings = current.copy(cloudSync = normalizedCloud)
+        preferencesRepository.saveSettings(normalizedSettings)
+        _uiState.update { it.copy(settings = normalizedSettings) }
+        val settings = normalizedSettings.cloudSync
         return desktopPairingClient.sendCloudSettings(qrPayload, settings)
             .map { currentStrings().desktopPairingSent }
     }

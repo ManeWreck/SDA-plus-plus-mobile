@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sdaplusplus-pairing-relay",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-13",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "PAIRING_SESSIONS",
+        "class_name": "PairingSession"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["PairingSession"]
+    }
+  ]
+}

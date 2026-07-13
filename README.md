@@ -42,7 +42,9 @@ This is a debug APK that can be installed directly on Android for testing and pe
 3. Use WebDAV to back up encrypted vault data.
 4. Open the QR screen and approve your Steam sign-in with the selected account.
 
-For desktop cloud setup, choose **Connect cloud from SDA++ Mobile with one scan** on the SDA++ Desktop welcome screen. Scan its two-minute QR code in the unlocked mobile app and confirm sharing the WebDAV connection. Both devices must be on the same private network. Steam secrets and account files are not included in the pairing message.
+For desktop cloud setup, choose **Connect cloud from SDA++ Mobile with one scan** on the SDA++ Desktop welcome screen. Scan its two-minute QR code in the unlocked mobile app and confirm sharing the WebDAV connection. The app tries the local network first and automatically falls back to the SDA++ HTTPS relay when the devices cannot reach each other directly. Steam secrets and account files are not included in the pairing message.
+
+The relay only handles the P-256 ECDH / AES-256-GCM encrypted envelope. Each random session has a separate bearer token, a 64 KiB limit, a two-minute TTL, and one successful read before deletion. The relay cannot decrypt the WebDAV credentials.
 
 Modern Steam QR approval on Android requires the imported account to include a usable Steam mobile web `Session` snapshot.
 
@@ -66,6 +68,7 @@ Debug APK output:
 ## Project Layout
 
 - `SDAplusplus-Mobile/` - Android app source
+- `pairing-relay/` - Cloudflare Worker used only as encrypted pairing fallback
 - `assets/screenshots/` - repository screenshots for GitHub
 
 More Android implementation details live in [SDAplusplus-Mobile/README.md](./SDAplusplus-Mobile/README.md).
