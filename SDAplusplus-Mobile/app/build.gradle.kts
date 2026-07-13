@@ -11,8 +11,8 @@ android {
         applicationId = "com.manewreck.sdapp.mobile"
         minSdk = 28
         targetSdk = 34
-        versionCode = 3
-        versionName = "0.3.0-relay-preview"
+        versionCode = 4
+        versionName = "0.3.1-relay-preview"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
