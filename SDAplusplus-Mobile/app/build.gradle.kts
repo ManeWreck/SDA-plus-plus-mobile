@@ -11,7 +11,7 @@ android {
         applicationId = "com.manewreck.sdapp.mobile"
         minSdk = 28
         targetSdk = 34
-        versionCode = 5
+        versionCode = 6
         versionName = "0.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
