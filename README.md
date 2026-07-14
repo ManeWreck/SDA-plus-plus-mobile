@@ -11,14 +11,14 @@
 <p align="center">
   <img alt="Android" src="https://img.shields.io/badge/Android-9%2B-3DDC84" />
   <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-Compose-7F52FF" />
-  <img alt="Version" src="https://img.shields.io/badge/Version-0.4.0-668CFF" />
+  <img alt="Version" src="https://img.shields.io/badge/Version-0.5.0-668CFF" />
 </p>
 
 SDA++ Mobile is an independent Steam utility for managing your own authenticator accounts. It is not affiliated with Valve or Steam.
 
 ## Download
 
-Download `SDAplusplus-Mobile-0.4.0.apk` from [GitHub Releases](https://github.com/ManeWreck/SDA-plus-plus-mobile/releases/latest).
+Download `SDAplusplus-Mobile-0.5.0.apk` from [GitHub Releases](https://github.com/ManeWreck/SDA-plus-plus-mobile/releases/latest).
 
 Android may ask for permission to install applications from your browser or file manager. Updating the app over an existing installation preserves the encrypted local vault.
 
@@ -33,7 +33,8 @@ Android may ask for permission to install applications from your browser or file
 - English and Russian interface
 - Combined Steam confirmations for supported accounts with Accept and Reject actions
 - Account session tools, including termination of active Steam sessions
-- Encrypted one-scan transfer of WebDAV settings to SDA++ Desktop
+- Encrypted bidirectional transfer of WebDAV settings with SDA++ Desktop
+- Separate eight-character one-time verification code for pairing
 - Local-network pairing with automatic HTTPS relay fallback when direct access is unavailable
 
 ## Screenshots
@@ -62,9 +63,9 @@ Modern QR approval, confirmations, and account session tools require the importe
 
 ## Desktop Pairing
 
-On the SDA++ Desktop welcome screen, choose **Connect cloud from SDA++ Mobile with one scan**. Scan the two-minute QR code with the unlocked mobile application and confirm sharing the WebDAV connection.
+On SDA++ Desktop, open **Account tools > Connect SDA++ Mobile** or use the pairing option on the first-run screen. Choose the transfer direction, scan the two-minute QR code with the unlocked mobile application, and enter the separate eight-character code shown on the desktop.
 
-Pairing uses ephemeral P-256 ECDH and AES-256-GCM. The application sends only the WebDAV URL, login, application password, and cloud folder. Steam secrets, account files, and vault keys are never included. Direct local transfer is attempted first; if the devices cannot reach each other, the same encrypted payload is sent through the SDA++ HTTPS relay and deleted after its first successful download.
+Pairing uses ephemeral P-256 ECDH and AES-256-GCM. WebDAV credentials are never embedded in the QR code. The application transfers only the WebDAV URL, login, application password, and cloud folder; Steam secrets, account files, and vault keys are never included. Direct local transfer is attempted first; if the devices cannot reach each other, encrypted request and response payloads use one-time HTTPS relay channels.
 
 ## Security
 

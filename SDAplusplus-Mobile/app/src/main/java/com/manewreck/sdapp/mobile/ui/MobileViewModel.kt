@@ -290,7 +290,9 @@ class MobileViewModel(
             .map { currentStrings().qrApproved }
     }
 
-    suspend fun pairDesktop(qrPayload: String): Result<String> {
+    fun desktopPairingDirection(qrPayload: String): String = desktopPairingClient.direction(qrPayload)
+
+    suspend fun pairDesktop(qrPayload: String, verificationCode: String): Result<String> {
         val current = _uiState.value.settings
         val normalizedCloud = current.cloudSync.copy(
             url = current.cloudSync.url.trim(),
@@ -301,8 +303,17 @@ class MobileViewModel(
         preferencesRepository.saveSettings(normalizedSettings)
         _uiState.update { it.copy(settings = normalizedSettings) }
         val settings = normalizedSettings.cloudSync
-        return desktopPairingClient.sendCloudSettings(qrPayload, settings)
+        return desktopPairingClient.sendCloudSettings(qrPayload, verificationCode, settings)
             .map { currentStrings().desktopPairingSent }
+    }
+
+    suspend fun receiveDesktopSettings(qrPayload: String, verificationCode: String): Result<String> {
+        return desktopPairingClient.receiveCloudSettings(qrPayload, verificationCode).map { cloud ->
+            val updated = _uiState.value.settings.copy(cloudSync = cloud)
+            preferencesRepository.saveSettings(updated)
+            _uiState.update { it.copy(settings = updated) }
+            currentStrings().desktopPairingReceived
+        }
     }
 
     fun loadConfirmations() {

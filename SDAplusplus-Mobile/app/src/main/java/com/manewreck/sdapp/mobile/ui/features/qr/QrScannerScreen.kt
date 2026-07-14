@@ -33,6 +33,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -81,7 +82,9 @@ fun QrScannerScreen(
     strings: AppStrings,
     onSelectAccount: (String) -> Unit,
     onApproveQr: suspend (String) -> Result<String>,
-    onPairDesktop: suspend (String) -> Result<String>,
+    onPairingDirection: (String) -> String,
+    onPairDesktop: suspend (String, String) -> Result<String>,
+    onReceiveDesktopSettings: suspend (String, String) -> Result<String>,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -106,6 +109,7 @@ fun QrScannerScreen(
     var scanLocked by rememberSaveable { mutableStateOf(false) }
     var accountPickerOpen by rememberSaveable { mutableStateOf(false) }
     var pendingDesktopPairing by rememberSaveable { mutableStateOf<String?>(null) }
+    var pairingCode by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         if (!cameraPermissionGranted) {
@@ -114,9 +118,11 @@ fun QrScannerScreen(
     }
 
     pendingDesktopPairing?.let { payload ->
+        val receivingFromDesktop = onPairingDirection(payload) == "to-mobile"
         AlertDialog(
             onDismissRequest = {
                 pendingDesktopPairing = null
+                pairingCode = ""
                 scanLocked = false
             },
             confirmButton = {
@@ -125,20 +131,38 @@ fun QrScannerScreen(
                     approvalRunning = true
                     resultTitle = strings.desktopPairingTitle
                     scope.launch {
-                        val result = onPairDesktop(payload)
+                        val result = if (receivingFromDesktop) {
+                            onReceiveDesktopSettings(payload, pairingCode)
+                        } else {
+                            onPairDesktop(payload, pairingCode)
+                        }
                         approvalRunning = false
                         resultMessage = result.getOrElse { it.message ?: strings.desktopPairingFailed }
+                        pairingCode = ""
                     }
-                }) { Text(strings.shareCloudSettings) }
+                }, enabled = pairingCode.trim().replace("-", "").replace(" ", "").length == 8) {
+                    Text(if (receivingFromDesktop) strings.receiveCloudSettings else strings.shareCloudSettings)
+                }
             },
             dismissButton = {
                 Button(onClick = {
                     pendingDesktopPairing = null
+                    pairingCode = ""
                     scanLocked = false
                 }) { Text(strings.cancel) }
             },
             title = { Text(strings.desktopPairingTitle) },
-            text = { Text(strings.desktopPairingPrompt) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(if (receivingFromDesktop) strings.desktopPairingReceivePrompt else strings.desktopPairingPrompt)
+                    OutlinedTextField(
+                        value = pairingCode,
+                        onValueChange = { pairingCode = it.uppercase().take(10) },
+                        label = { Text(strings.pairingCode) },
+                        singleLine = true,
+                    )
+                }
+            },
         )
     }
 
@@ -534,7 +558,10 @@ private fun looksLikeSteamQr(rawValue: String): Boolean {
 }
 
 private fun looksLikeDesktopPairingQr(rawValue: String): Boolean =
-    rawValue.trim().startsWith("sdapp-pair://v1", ignoreCase = true)
+    rawValue.trim().let {
+        it.startsWith("sdapp-pair://v2", ignoreCase = true) ||
+            it.startsWith("sdapp-pair://v1", ignoreCase = true)
+    }
 
 @SuppressLint("UnsafeOptInUsageError")
 @Composable
