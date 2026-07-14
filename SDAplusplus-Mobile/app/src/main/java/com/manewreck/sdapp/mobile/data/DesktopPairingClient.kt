@@ -31,7 +31,7 @@ class DesktopPairingClient {
         .readTimeout(8, TimeUnit.SECONDS)
         .build()
 
-    suspend fun sendCloudSettings(pairingUri: String, settings: CloudSyncSettings): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun sendCloudSettings(pairingUri: String, verificationCode: String, settings: CloudSyncSettings): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             require(settings.provider.name == "WebDav") { "Only WebDAV can be shared with desktop right now." }
             val normalizedUrl = settings.url.trim()
@@ -48,10 +48,11 @@ class DesktopPairingClient {
             }
 
             val uri = Uri.parse(pairingUri.trim())
-            require(uri.scheme.equals("sdapp-pair", ignoreCase = true) && uri.host == "v1") { "Unsupported SDA++ pairing QR." }
+            require(uri.scheme.equals("sdapp-pair", ignoreCase = true) && uri.host == "v2") { "Unsupported SDA++ pairing QR." }
             val descriptor = JSONObject(String(decodeUrl(uri.getQueryParameter("p") ?: error("Pairing data is missing.")), Charsets.UTF_8))
-            require(descriptor.getInt("v") == 1) { "Unsupported pairing version." }
+            require(descriptor.getInt("v") == 2 && descriptor.getString("direction") == "to-desktop") { "This QR is not receiving phone settings." }
             require(System.currentTimeMillis() / 1000L <= descriptor.getLong("exp")) { "This pairing QR has expired." }
+            val normalizedCode = normalizeCode(verificationCode)
 
             val sessionIdText = descriptor.getString("sid")
             val sessionId = decodeUrl(sessionIdText)
@@ -66,11 +67,11 @@ class DesktopPairingClient {
                 doPhase(desktopPublicKey, true)
             }
             val sharedSecret = agreement.generateSecret()
-            val aesKey = hkdfSha256(sharedSecret, sessionId, "SDA++ local pairing v1".toByteArray(), 32)
+            val aesKey = hkdfSha256(sharedSecret, sessionId, "SDA++ local pairing v2|$normalizedCode".toByteArray(), 32)
             sharedSecret.fill(0)
 
             val payload = JSONObject()
-                .put("v", 1)
+                .put("v", 2)
                 .put("provider", "webdav")
                 .put("url", normalizedUrl)
                 .put("login", settings.login.trim())
@@ -91,7 +92,7 @@ class DesktopPairingClient {
             val tag = encrypted.copyOfRange(encrypted.size - 16, encrypted.size)
 
             val envelope = JSONObject()
-                .put("v", 1)
+                .put("v", 2)
                 .put("sid", sessionIdText)
                 .put("public_key", Base64.encodeToString(keyPair.public.encoded, Base64.NO_WRAP))
                 .put("nonce", Base64.encodeToString(nonce, Base64.NO_WRAP))
@@ -153,6 +154,135 @@ class DesktopPairingClient {
                     "Create a new desktop pairing QR and try again."
             }
         }
+    }
+
+    suspend fun receiveCloudSettings(pairingUri: String, verificationCode: String): Result<CloudSyncSettings> = withContext(Dispatchers.IO) {
+        runCatching {
+            val uri = Uri.parse(pairingUri.trim())
+            require(uri.scheme.equals("sdapp-pair", ignoreCase = true) && uri.host == "v2") { "Unsupported SDA++ pairing QR." }
+            val descriptor = JSONObject(String(decodeUrl(uri.getQueryParameter("p") ?: error("Pairing data is missing.")), Charsets.UTF_8))
+            require(descriptor.getInt("v") == 2 && descriptor.getString("direction") == "to-mobile") { "This QR is not sending desktop settings." }
+            require(System.currentTimeMillis() / 1000L <= descriptor.getLong("exp")) { "This pairing QR has expired." }
+            val normalizedCode = normalizeCode(verificationCode)
+            val sessionIdText = descriptor.getString("sid")
+            val sessionId = decodeUrl(sessionIdText)
+            val desktopPublicKey = KeyFactory.getInstance("EC").generatePublic(
+                X509EncodedKeySpec(Base64.decode(descriptor.getString("pk"), Base64.DEFAULT)),
+            )
+            val keyPair = KeyPairGenerator.getInstance("EC").apply {
+                initialize(ECGenParameterSpec("secp256r1"))
+            }.generateKeyPair()
+            val agreement = KeyAgreement.getInstance("ECDH").apply {
+                init(keyPair.private)
+                doPhase(desktopPublicKey, true)
+            }
+            val shared = agreement.generateSecret()
+            val key = hkdfSha256(shared, sessionId, "SDA++ local pairing v2|$normalizedCode".toByteArray(), 32)
+            shared.fill(0)
+            val requestBytes = JSONObject()
+                .put("v", 2)
+                .put("sid", sessionIdText)
+                .put("public_key", Base64.encodeToString(keyPair.public.encoded, Base64.NO_WRAP))
+                .toString().toByteArray(Charsets.UTF_8)
+
+            var responseBytes: ByteArray? = null
+            val hosts = descriptor.getJSONArray("hosts")
+            val port = descriptor.getInt("port")
+            for (index in 0 until hosts.length()) {
+                try {
+                    Socket().use { socket ->
+                        socket.connect(InetSocketAddress(hosts.getString(index), port), 4_000)
+                        socket.soTimeout = 8_000
+                        DataOutputStream(socket.getOutputStream()).apply {
+                            writeInt(requestBytes.size)
+                            write(requestBytes)
+                            flush()
+                        }
+                        val input = DataInputStream(socket.getInputStream())
+                        val size = input.readInt()
+                        require(size in 1..65_536) { "Invalid response from desktop." }
+                        responseBytes = ByteArray(size).also(input::readFully)
+                    }
+                    if (responseBytes != null) break
+                } catch (_: Throwable) { }
+            }
+
+            if (responseBytes == null) {
+                putRelay(descriptor, sessionIdText, descriptor.getString("relay_token"), requestBytes)
+                responseBytes = pollRelay(
+                    descriptor.getString("relay"),
+                    descriptor.getString("response_sid"),
+                    descriptor.getString("response_token"),
+                )
+            }
+            requestBytes.fill(0)
+            val envelope = JSONObject(String(responseBytes!!, Charsets.UTF_8))
+            require(envelope.getInt("v") == 2 && envelope.getString("sid") == sessionIdText) { "Desktop returned the wrong pairing response." }
+            val nonce = Base64.decode(envelope.getString("nonce"), Base64.DEFAULT)
+            val ciphertext = Base64.decode(envelope.getString("ciphertext"), Base64.DEFAULT)
+            val tag = Base64.decode(envelope.getString("tag"), Base64.DEFAULT)
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply {
+                init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(128, nonce))
+                updateAAD(sessionId)
+            }
+            val plaintext = try {
+                cipher.doFinal(ciphertext + tag)
+            } catch (_: Throwable) {
+                error("The one-time code is incorrect or the pairing response is invalid.")
+            } finally {
+                key.fill(0)
+                responseBytes!!.fill(0)
+            }
+            try {
+                val payload = JSONObject(String(plaintext, Charsets.UTF_8))
+                require(payload.getInt("v") == 2 && payload.getString("provider") == "webdav") { "Unsupported cloud profile." }
+                val url = payload.getString("url").trim()
+                require(Uri.parse(url).scheme.equals("https", true)) { "Desktop supplied an invalid HTTPS WebDAV URL." }
+                CloudSyncSettings(
+                    provider = com.manewreck.sdapp.mobile.core.sync.CloudProviderType.WebDav,
+                    url = url,
+                    login = payload.getString("login").trim(),
+                    password = payload.getString("password"),
+                    remotePath = payload.optString("remote_path", "SDAppVault").ifBlank { "SDAppVault" },
+                )
+            } finally {
+                plaintext.fill(0)
+            }
+        }
+    }
+
+    private fun putRelay(descriptor: JSONObject, sid: String, token: String, payload: ByteArray) {
+        val relay = descriptor.getString("relay").trimEnd('/')
+        val request = Request.Builder().url("$relay/v1/pair/$sid")
+            .header("Authorization", "Bearer $token")
+            .put(payload.toRequestBody("application/octet-stream".toMediaType())).build()
+        relayClient.newCall(request).execute().use { require(it.isSuccessful) { "Pairing relay returned HTTP ${it.code}." } }
+    }
+
+    private fun pollRelay(relayValue: String, sid: String, token: String): ByteArray {
+        val relay = relayValue.trimEnd('/')
+        repeat(30) {
+            val request = Request.Builder().url("$relay/v1/pair/$sid")
+                .header("Authorization", "Bearer $token").get().build()
+            relayClient.newCall(request).execute().use { response ->
+                if (response.code == 200) return response.body?.bytes() ?: error("Empty pairing response.")
+                require(response.code == 204) { "Pairing relay returned HTTP ${response.code}." }
+            }
+            Thread.sleep(1000)
+        }
+        error("Desktop did not answer before the pairing session expired.")
+    }
+
+    fun direction(pairingUri: String): String = runCatching {
+        val uri = Uri.parse(pairingUri.trim())
+        val descriptor = JSONObject(String(decodeUrl(uri.getQueryParameter("p") ?: return ""), Charsets.UTF_8))
+        descriptor.optString("direction")
+    }.getOrDefault("")
+
+    private fun normalizeCode(value: String): String {
+        val normalized = value.trim().uppercase().replace("-", "").replace(" ", "")
+        require(normalized.matches(Regex("^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{8}$"))) { "Enter the 8-character code shown on the other device." }
+        return normalized
     }
 
     private fun hkdfSha256(input: ByteArray, salt: ByteArray, info: ByteArray, length: Int): ByteArray {
