@@ -1,25 +1,40 @@
 # SDA++ Mobile
 
-Android Steam Guard companion focused on encrypted account storage, WebDAV backup sync, and Steam QR approval.
+<p align="center">
+  <img src="./SDAplusplus-Mobile/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" width="144" alt="SDA++ Mobile icon" />
+</p>
 
-SDA++ Mobile is built for personal account management convenience. It is not affiliated with Valve or Steam.
+<p align="center">
+  Steam Guard authenticator for Android with encrypted local storage, QR sign-in approval, WebDAV synchronization, and multi-account tools.
+</p>
+
+<p align="center">
+  <img alt="Android" src="https://img.shields.io/badge/Android-9%2B-3DDC84" />
+  <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-Compose-7F52FF" />
+  <img alt="Version" src="https://img.shields.io/badge/Version-0.4.0-668CFF" />
+</p>
+
+SDA++ Mobile is an independent Steam utility for managing your own authenticator accounts. It is not affiliated with Valve or Steam.
 
 ## Download
 
-- [SDAplusplus-Mobile-pairing-preview.apk](./downloads/SDAplusplus-Mobile-pairing-preview.apk)
+Download `SDAplusplus-Mobile-0.4.0.apk` from [GitHub Releases](https://github.com/ManeWreck/SDA-plus-plus-mobile/releases/latest).
 
-This is a debug APK that can be installed directly on Android for testing and personal use.
+Android may ask for permission to install applications from your browser or file manager. Updating the app over an existing installation preserves the encrypted local vault.
 
 ## Features
 
-- Encrypted local vault for imported `.maFile` account data
-- Steam Guard code generation on-device
-- Steam-style QR scanner flow for modern Steam sign-in
-- WebDAV pull/push backup sync
-- PIN / biometrics app lock
-- Public profile enrichment for avatar, persona name, and Steam level
-- Favorites, account sorting, search, and Russian / English localization
-- One-scan encrypted transfer of saved WebDAV settings to a fresh SDA++ Desktop installation
+- Encrypted local storage for imported `.maFile` account data
+- On-device Steam Guard code generation
+- Steam QR sign-in scanning and approval
+- WebDAV synchronization of encrypted account backups
+- PIN and biometric application lock
+- Account avatars, persona names, Steam levels, favorites, sorting, and search
+- English and Russian interface
+- Combined Steam confirmations for supported accounts with Accept and Reject actions
+- Account session tools, including termination of active Steam sessions
+- Encrypted one-scan transfer of WebDAV settings to SDA++ Desktop
+- Local-network pairing with automatic HTTPS relay fallback when direct access is unavailable
 
 ## Screenshots
 
@@ -35,55 +50,58 @@ This is a debug APK that can be installed directly on Android for testing and pe
 | --- | --- |
 | ![Account Detail](./assets/screenshots/account-detail.png) | ![QR Account Picker](./assets/screenshots/qr-account-picker.png) |
 
-## How It Works
+## Getting Started
 
-1. Import your Steam `.maFile` into the encrypted local vault.
-2. Protect access with a PIN or biometrics.
-3. Use WebDAV to back up encrypted vault data.
-4. Open the QR screen and approve your Steam sign-in with the selected account.
+1. Install the APK and open SDA++ Mobile.
+2. Import one or more `.maFile` files from a trusted SDA/SDA++ backup.
+3. Configure an application PIN and biometrics.
+4. Optionally configure WebDAV to synchronize the encrypted vault.
+5. Select an account to view its Steam Guard code or approve a Steam QR sign-in.
 
-For desktop cloud setup, choose **Connect cloud from SDA++ Mobile with one scan** on the SDA++ Desktop welcome screen. Scan its two-minute QR code in the unlocked mobile app and confirm sharing the WebDAV connection. The app tries the local network first and automatically falls back to the SDA++ HTTPS relay when the devices cannot reach each other directly. Steam secrets and account files are not included in the pairing message.
+Modern QR approval, confirmations, and account session tools require the imported account to contain a valid Steam mobile web `Session`. Accounts without one can still generate Steam Guard codes and use encrypted backup synchronization.
 
-The relay only handles the P-256 ECDH / AES-256-GCM encrypted envelope. Each random session has a separate bearer token, a 64 KiB limit, a two-minute TTL, and one successful read before deletion. The relay cannot decrypt the WebDAV credentials.
+## Desktop Pairing
 
-Modern Steam QR approval on Android requires the imported account to include a usable Steam mobile web `Session` snapshot.
+On the SDA++ Desktop welcome screen, choose **Connect cloud from SDA++ Mobile with one scan**. Scan the two-minute QR code with the unlocked mobile application and confirm sharing the WebDAV connection.
 
-## Build
+Pairing uses ephemeral P-256 ECDH and AES-256-GCM. The application sends only the WebDAV URL, login, application password, and cloud folder. Steam secrets, account files, and vault keys are never included. Direct local transfer is attempted first; if the devices cannot reach each other, the same encrypted payload is sent through the SDA++ HTTPS relay and deleted after its first successful download.
+
+## Security
+
+- The local vault and imported account files are encrypted with keys protected by Android Keystore.
+- WebDAV credentials are stored in encrypted application preferences.
+- Passwords, session tokens, and Steam secrets are not written to application logs.
+- Session termination and confirmation actions require an authenticated Steam session.
+- Public builds do not contain personal `.maFile`, manifest, credential, token, or backup files.
+
+Keep a separate encrypted backup of your authenticator files. Losing both the device and every backup can permanently remove access to Steam Guard codes.
+
+## Building
 
 Requirements:
 
 - Android Studio
-- Android SDK
-- JDK 17+
+- Android SDK 34
+- JDK 17
 
 ```powershell
 cd .\SDAplusplus-Mobile
 .\gradlew assembleDebug
 ```
 
-Debug APK output:
+The APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
-- `SDAplusplus-Mobile/app/build/outputs/apk/debug/app-debug.apk`
+## Repository Layout
 
-## Project Layout
-
-- `SDAplusplus-Mobile/` - Android app source
-- `pairing-relay/` - Cloudflare Worker used only as encrypted pairing fallback
-- `assets/screenshots/` - repository screenshots for GitHub
-
-More Android implementation details live in [SDAplusplus-Mobile/README.md](./SDAplusplus-Mobile/README.md).
-
-## Safety
-
-Before every push, never include:
-
-- `maFiles`
-- `manifest.json`
-- credentials files
-- token snapshots
-- backup archives
+- `SDAplusplus-Mobile/` - Android application and shared modules
+- `pairing-relay/` - encrypted Cloudflare Worker fallback for desktop pairing
+- `assets/screenshots/` - screenshots used on the project page
 
 ## Support
 
-- GitHub: [Manewreck](https://github.com/Manewreck)
+- GitHub: [ManeWreck](https://github.com/ManeWreck)
 - Ko-fi: [ko-fi.com/manewreck](https://ko-fi.com/manewreck)
+
+## License and Disclaimer
+
+SDA++ Mobile is an unofficial project and is not endorsed by Valve. Use it only with accounts you own and keep secure backups of all authenticator data.
