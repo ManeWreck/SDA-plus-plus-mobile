@@ -31,6 +31,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.manewreck.sdapp.mobile.ui.features.account.AccountDetailScreen
+import com.manewreck.sdapp.mobile.ui.features.confirmations.ConfirmationsScreen
 import com.manewreck.sdapp.mobile.ui.features.home.HomeScreen
 import com.manewreck.sdapp.mobile.ui.features.lock.AppLockScreen
 import com.manewreck.sdapp.mobile.ui.features.qr.QrScannerScreen
@@ -145,6 +146,7 @@ fun SdaMobileRoot() {
                                     MobileDestination.CloudSync -> strings.sync
                                     MobileDestination.Settings -> strings.settings
                                     MobileDestination.Account -> strings.account
+                                    MobileDestination.Confirmations -> strings.confirmations
                                 },
                             )
                         },
@@ -168,6 +170,9 @@ fun SdaMobileRoot() {
                     strings = strings,
                     onImportMaFile = {
                         importLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
+                    },
+                    onOpenConfirmations = {
+                        navController.navigate(MobileDestination.Confirmations.route)
                     },
                     onOpenAccount = { account ->
                         viewModel.selectAccount(account.steamId)
@@ -199,6 +204,26 @@ fun SdaMobileRoot() {
                         }
                     },
                     onToggleFavorite = viewModel::toggleSelectedFavorite,
+                    onOpenConfirmations = {
+                        navController.navigate(MobileDestination.Confirmations.route)
+                    },
+                    onTerminateSessions = viewModel::terminateSelectedAccountSessions,
+                    accountToolRunning = state.accountToolRunning,
+                )
+            }
+            composable(MobileDestination.Confirmations.route) {
+                LaunchedEffect(Unit) {
+                    viewModel.loadConfirmations()
+                }
+                ConfirmationsScreen(
+                    confirmations = state.confirmations,
+                    loading = state.confirmationsLoading,
+                    notice = state.confirmationsNotice,
+                    actionId = state.confirmationActionId,
+                    strings = strings,
+                    onBack = { navController.popBackStack() },
+                    onRefresh = viewModel::loadConfirmations,
+                    onRespond = viewModel::respondToConfirmation,
                 )
             }
             composable(MobileDestination.QrScanner.route) {
@@ -210,6 +235,7 @@ fun SdaMobileRoot() {
                     strings = strings,
                     onSelectAccount = viewModel::selectAccount,
                     onApproveQr = viewModel::approveSelectedQrPayload,
+                    onPairDesktop = viewModel::pairDesktop,
                 )
             }
             composable(MobileDestination.CloudSync.route) {

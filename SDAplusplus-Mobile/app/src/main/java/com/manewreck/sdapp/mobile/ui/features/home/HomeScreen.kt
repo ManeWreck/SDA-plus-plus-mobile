@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -57,6 +58,7 @@ fun HomeScreen(
     accountSearchEnabled: Boolean,
     strings: AppStrings,
     onImportMaFile: () -> Unit,
+    onOpenConfirmations: () -> Unit,
     onOpenAccount: (AccountSummary) -> Unit,
 ) {
     var searchQuery by rememberSaveable { mutableStateOf("") }
@@ -126,6 +128,9 @@ fun HomeScreen(
                 ) {
                     Button(onClick = onImportMaFile, modifier = Modifier.weight(1f)) {
                         Text(strings.importMaFile)
+                    }
+                    OutlinedButton(onClick = onOpenConfirmations, modifier = Modifier.weight(1f)) {
+                        Text(strings.confirmations)
                     }
                 }
                 Text(

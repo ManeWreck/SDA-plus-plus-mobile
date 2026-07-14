@@ -12,4 +12,5 @@ sealed class MobileDestination(
     data object QrScanner : MobileDestination("qr", "QR", "Q")
     data object CloudSync : MobileDestination("sync", "Sync", "S")
     data object Settings : MobileDestination("settings", "Settings", "C")
+    data object Confirmations : MobileDestination("confirmations", "Confirmations", "T")
 }

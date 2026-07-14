@@ -15,15 +15,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,7 +60,11 @@ fun AccountDetailScreen(
     onCopyCode: () -> Unit,
     onCopySteamId: () -> Unit,
     onToggleFavorite: () -> Unit,
+    onOpenConfirmations: () -> Unit,
+    onTerminateSessions: () -> Unit,
+    accountToolRunning: Boolean,
 ) {
+    var showTerminateWarning by rememberSaveable { mutableStateOf(false) }
     val progress = if (account == null) 0f else secondsRemaining.coerceIn(0, 30) / 30f
     val importedAt = rememberFormattedInstant(account?.importedAtUtc)
     val profileState = rememberProfileState(publicProfile)
@@ -68,9 +79,33 @@ fun AccountDetailScreen(
         "This import only contains Steam Guard secrets. Web-session actions will need a fresh login later."
     }
 
+    if (showTerminateWarning) {
+        AlertDialog(
+            onDismissRequest = { showTerminateWarning = false },
+            title = { Text(strings.terminateSessions) },
+            text = { Text(strings.terminateSessionsWarning) },
+            dismissButton = {
+                OutlinedButton(onClick = { showTerminateWarning = false }) {
+                    Text(strings.cancel)
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showTerminateWarning = false
+                        onTerminateSessions()
+                    },
+                ) {
+                    Text(strings.terminateSessions)
+                }
+            },
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -218,6 +253,36 @@ fun AccountDetailScreen(
                 color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.padding(top = 6.dp),
             )
+        }
+
+        MobileCard {
+            Text(strings.accountTools, style = MaterialTheme.typography.titleMedium)
+            Text(
+                if (account?.hasSessionSnapshot == true) sessionHealthText else strings.sessionRequired,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                OutlinedButton(
+                    onClick = onOpenConfirmations,
+                    enabled = account != null && !accountToolRunning,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(strings.confirmations)
+                }
+                OutlinedButton(
+                    onClick = { showTerminateWarning = true },
+                    enabled = account?.hasSessionSnapshot == true && !accountToolRunning,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(strings.terminateSessions)
+                }
+            }
         }
 
         MobileCard {
